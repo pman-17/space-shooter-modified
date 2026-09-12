@@ -2,16 +2,25 @@ import pygame
 from os.path import join
 from random import randint, uniform
 
+meteors_destoryed = 0
+
 
 ########pygame sprite that contains our surface and rectangle
 class Player(pygame.sprite.Sprite):
     def __init__(self, groups):
         super().__init__(groups)
-        self.image = pygame.image.load(join('space shooter','images', 'player.png')).convert_alpha()
+        self.original_image = pygame.image.load(join('space shooter','images', 'player.png')).convert_alpha()
+        self.image = self.original_image
         self.rect = self.image.get_frect(center = (WINDOW_WIDTH/2, WINDOW_HEIGHT/2))
         self.mask = pygame.mask.from_surface(self.image)
+        self.pos = pygame.math.Vector2(self.rect.center)  # float position, source of truth
+        
+
         #player direction movement distance
         self.direction = pygame.Vector2()
+        self.angle = 0
+        self.max_angle = 20
+        self.rotationspeed = 10
         self.speed = 300
 
         #cooldown for laser
@@ -37,8 +46,23 @@ class Player(pygame.sprite.Sprite):
         self.direction.y = int(keys[pygame.K_DOWN]) - int(keys[pygame.K_UP])
         #ensure that speed of player is consistent when moving diagonally
         self.direction = self.direction.normalize() if self.direction else self.direction
+        # self.angle = int(keys[pygame.K_RIGHT]) - int(keys[pygame.K_LEFT])
+
+        if keys[pygame.K_RIGHT]:
+            target_angle = -self.max_angle
+        elif keys[pygame.K_LEFT]:
+            target_angle = self.max_angle
+        else:
+            target_angle = 0
+
+        self.angle += (target_angle - self.angle) * min(self.rotationspeed * dt, 1)
+
+
         #change the coord for players centre of rectangle using delta time method
         self.rect.center += self.direction * self.speed * dt
+        self.pos += self.direction * self.speed * dt
+        self.image = pygame.transform.rotate(self.original_image, self.angle)
+
 
         #if pace is pressed and timer if statement above checks to see if cooldiwn has passed then shoot laser and restart timer + set shoot to false
         recent_keys = pygame.key.get_just_pressed()
@@ -63,13 +87,18 @@ class Laser(pygame.sprite.Sprite):
 
     def __init__(self, surf, pos, groups):
         super().__init__(groups)
-        self.image = surf
+        self.player = player
+        self.original_image = surf
+        self.image = self.original_image
         #set image spawn inside the image of ship using midbottom
         self.rect = self.image.get_frect(midbottom = pos)
+        self.pos = pygame.math.Vector2(self.rect.center)
+
 
     def update(self, dt):
         #set image to move along y axis
         self.rect.centery -= 400 * dt
+        self.image = pygame.transform.rotate(self.original_image, self.player.angle)
         #if laser reaches top of screen then delete it
         if self.rect.bottom < 0:
             self.kill()
@@ -86,7 +115,7 @@ class Meteor(pygame.sprite.Sprite):
         self.direction = pygame.Vector2(uniform(-0.3, 0.3), 1)
         #set random speed for metoers
         self.speed = randint(200, 300)
-        self.rotation_speed = randint(40, 50)
+        self.rotation_speed = randint(40, 80)
         self.rotation = 0
       
 
@@ -120,6 +149,8 @@ class AnimatedExplosion(pygame.sprite.Sprite):
 
 def collisions():
     global running
+    global meteors_destoryed
+
 
     #kill player if they collide with meteor, mask ensures we hit the actual image and not the edge of the rectangle the image is on
     collision_sprites = pygame.sprite.spritecollide(player, meteor_sprites, True, pygame.sprite.collide_mask)
@@ -133,9 +164,11 @@ def collisions():
             laser.kill()
             AnimatedExplosion(explosion_frames, laser.rect.midtop, all_sprites)
             explosion_sound.play()
+            meteors_destoryed += 1
+            print(meteors_destoryed)
+
 
 def display_score():
-
     #display the current remaning gametime as a string usinimg font.render
     current_time = pygame.time.get_ticks() // 100
     text_surface = font.render(str(current_time), True, (240, 240, 230))
@@ -143,12 +176,18 @@ def display_score():
     display_surface.blit(text_surface, text_rect)
     #place rectangle around the score using inflate so buffer between score and sides
     pygame.draw.rect(display_surface, (240, 240, 230), text_rect.inflate(20, 10).move(0, -8), 5, 10)
+    text_surface2 = font.render(f"Meteors: {str(meteors_destoryed)}", True, (240, 240, 230))
+    text_rect2 = text_surface2.get_frect(midtop = (WINDOW_WIDTH/8, WINDOW_HEIGHT - 50))
+    display_surface.blit(text_surface2, text_rect2)
+
+
+
 
 
 ################### general setup 
 pygame.init()
 #display size and create window
-WINDOW_WIDTH, WINDOW_HEIGHT = 1150, 630
+WINDOW_WIDTH, WINDOW_HEIGHT = 1200, 800
 display_surface = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 #set window title
 pygame.display.set_caption("Space Shooter")
@@ -204,6 +243,7 @@ meteor_event = pygame.event.custom_type()
 #timer that lasts half a second
 pygame.time.set_timer(meteor_event, 500)
 
+fullscreen = False
 ##################### run game
 while running:
     #set framrate to computer optimal framerate
@@ -221,6 +261,14 @@ while running:
            x, y = randint(0, WINDOW_WIDTH), randint(-200, -100)
            Meteor(meteor_surface, (x, y), (all_sprites, meteor_sprites))
 
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_F1:  # Common toggle key
+                fullscreen = not fullscreen
+                if fullscreen:
+                    display_surface = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.FULLSCREEN | pygame.SCALED)
+                else:
+                    display_surface = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))  # Windowed size
+
     #update the game
     all_sprites.update(dt)
 
@@ -229,7 +277,7 @@ while running:
     ##############draw the game
     
     #fill the window with colour
-    display_surface.fill("#3a2e3f")
+    display_surface.fill("#35064c")
 
     #draw the sprites held in the class onto the display surface
     all_sprites.draw(display_surface)
