@@ -1,4 +1,5 @@
 import pygame
+import math
 from os.path import join
 from random import randint, uniform
 
@@ -89,19 +90,27 @@ class Laser(pygame.sprite.Sprite):
         super().__init__(groups)
         self.player = player
         self.original_image = surf
-        self.image = self.original_image
-        #set image spawn inside the image of ship using midbottom
-        self.rect = self.image.get_frect(midbottom = pos)
+        self.angle = -self.player.angle
+
+        # Rotate image to face player's direction
+        self.image = pygame.transform.rotate(self.original_image, -self.angle)
+        self.rect = self.image.get_frect(midbottom=pos)
+
+        # Position
         self.pos = pygame.math.Vector2(self.rect.center)
 
+        # Direction: from_polar uses 0° = right, so offset by -90 to match "0° = up"
+        self.direction = pygame.math.Vector2()
+        self.direction.from_polar((1, self.angle - 90))
+        self.speed = 400
 
     def update(self, dt):
-        #set image to move along y axis
-        self.rect.centery -= 400 * dt
-        self.image = pygame.transform.rotate(self.original_image, self.player.angle)
-        #if laser reaches top of screen then delete it
-        if self.rect.bottom < 0:
-            self.kill()
+        self.pos += self.direction * self.speed * dt
+        self.rect.center = self.pos
+
+        screen = pygame.display.get_surface()
+        if not screen.get_rect().contains(self.rect):
+            self.kill()   
 
 class Meteor(pygame.sprite.Sprite):
     def __init__(self, surf, pos, groups):
@@ -161,7 +170,7 @@ def collisions():
     for laser in laser_sprites:
         collided_sprites = pygame.sprite.spritecollide(laser, meteor_sprites, True)
         if collided_sprites:
-            laser.kill()
+            # laser.kill()
             AnimatedExplosion(explosion_frames, laser.rect.midtop, all_sprites)
             explosion_sound.play()
             meteors_destoryed += 1
@@ -185,6 +194,9 @@ def display_score():
 
 
 ################### general setup 
+base_color = (255, 0, 0)  # Red
+pulse_speed = 0.1
+pulse_strength = 100
 pygame.init()
 #display size and create window
 WINDOW_WIDTH, WINDOW_HEIGHT = 1200, 800
