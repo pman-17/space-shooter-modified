@@ -1,3 +1,4 @@
-/Space-Shooter/space shooter/Code/.python-version
-/Space-Shooter/space shooter/Code/pyproject.toml
-/Space-Shooter/space shooter/Code/uv.lock
+.python-version
+pyproject.toml
+uv.lock
+.DS_Store

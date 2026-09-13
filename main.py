@@ -10,7 +10,7 @@ meteors_destoryed = 0
 class Player(pygame.sprite.Sprite):
     def __init__(self, groups):
         super().__init__(groups)
-        self.original_image = pygame.image.load(join('space shooter','images', 'player.png')).convert_alpha()
+        self.original_image = pygame.image.load(join('images', 'player.png')).convert_alpha()
         self.image = self.original_image
         self.rect = self.image.get_frect(center = (WINDOW_WIDTH/2, WINDOW_HEIGHT/2))
         self.mask = pygame.mask.from_surface(self.image)
@@ -211,24 +211,24 @@ clock = pygame.time.Clock()
 ################ importing 
 
 #import meteor image
-meteor_surface = pygame.image.load(join('space shooter', 'images', 'meteor.png')).convert_alpha()
+meteor_surface = pygame.image.load(join('images', 'meteor.png')).convert_alpha()
 #import laser image
-laser_surface = pygame.image.load(join('space shooter', 'images', 'laser.png')).convert_alpha()
+laser_surface = pygame.image.load(join('images', 'laser.png')).convert_alpha()
 # import star surface once outside of class so not importing it 20 times
-star_surf = pygame.image.load(join('space shooter', 'images', 'star.png')).convert_alpha()
+star_surf = pygame.image.load(join( 'images', 'star.png')).convert_alpha()
 #import our font
-font = pygame.font.Font(join('space shooter', 'images', 'Oxanium-Bold.ttf'), 40)
+font = pygame.font.Font(join('images', 'Oxanium-Bold.ttf'), 40)
 text_surface = font.render('text', True, (240, 240, 230))
 #explosion frames 
-explosion_frames = [pygame.image.load(join('space shooter', 'images', 'explosion',f'{i}.png')).convert_alpha() for i in range(21)]
+explosion_frames = [pygame.image.load(join('images', 'explosion',f'{i}.png')).convert_alpha() for i in range(21)]
 #import laser sound and set volume
-laser_sound = pygame.mixer.Sound(join('space shooter', 'audio', 'laser.wav')) 
+laser_sound = pygame.mixer.Sound(join('audio', 'laser.wav')) 
 laser_sound.set_volume(0.15)
 #import explosion sound
-explosion_sound = pygame.mixer.Sound(join('space shooter', 'audio', 'explosion.wav')) 
+explosion_sound = pygame.mixer.Sound(join('audio', 'explosion.wav')) 
 explosion_sound.set_volume(0.2)
 #import game music sound
-game_music = pygame.mixer.Sound(join('space shooter', 'audio', 'game_music.wav')) 
+game_music = pygame.mixer.Sound(join('audio', 'game_music.wav')) 
 game_music.set_volume(0.1)
 #plays music indefinetly
 game_music.play(loops = -1)
