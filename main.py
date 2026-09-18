@@ -2,8 +2,22 @@ import pygame
 import math
 from os.path import join
 from random import randint, uniform
+import time
+import threading
 
+isPowerUp = False
 meteors_destoryed = 0
+shot_power = 1
+def powerboost():
+    global shot_power
+    global isPowerUp
+
+    shot_power = 1
+    isPowerUp = False
+
+def start_timer(interval):
+    timer = threading.Timer(interval, powerboost)  # new instance each call
+    timer.start()
 
 
 ########pygame sprite that contains our surface and rectangle
@@ -156,9 +170,34 @@ class AnimatedExplosion(pygame.sprite.Sprite):
         else:
             self.kill()
 
+class Powerup(pygame.sprite.Sprite):
+    def __init__(self, surf, pos, *groups):
+        super().__init__(*groups)
+        self.original_surf = surf
+        self.image = surf
+        self.rect = self.image.get_frect(center = pos)
+        self.mask = pygame.mask.from_surface(self.image)
+        # self.start_time = pygame.time.get_ticks()
+        #give metoer direction but ensure they always travel down by setting y a 1
+        self.direction = pygame.Vector2(uniform(-0.3, 0.3), 1)
+        #set random speed for metoers
+        self.speed = randint(200, 300)
+        self.rotation_speed = randint(40, 80)
+        self.rotation = 0
+
+    def update(self, dt):
+        self.rect.center += self.direction * self.speed * dt
+        self.rotation += self.rotation_speed * dt
+        self.image = pygame.transform.rotozoom(self.original_surf, self.rotation, 1)
+        self.rect = self.image.get_frect(center = self.rect.center)
+        self.mask = pygame.mask.from_surface(self.image)
+
+
 def collisions():
     global running
     global meteors_destoryed
+    global shot_power
+    global isPowerUp
 
 
     #kill player if they collide with meteor, mask ensures we hit the actual image and not the edge of the rectangle the image is on
@@ -173,8 +212,16 @@ def collisions():
             # laser.kill()
             AnimatedExplosion(explosion_frames, laser.rect.midtop, all_sprites)
             explosion_sound.play()
-            meteors_destoryed += 1
+            meteors_destoryed += shot_power
             print(meteors_destoryed)
+    if pygame.sprite.spritecollide(player, powerup_sprites, True, pygame.sprite.collide_mask):
+        isPowerUp = True
+        shot_power += 1
+        powerup_sound.play()
+        print("Powerup")
+        start_timer(20)       
+                
+
 
 
 def display_score():
@@ -188,8 +235,6 @@ def display_score():
     text_surface2 = font.render(f"Meteors: {str(meteors_destoryed)}", True, (240, 240, 230))
     text_rect2 = text_surface2.get_frect(midtop = (WINDOW_WIDTH/8, WINDOW_HEIGHT - 50))
     display_surface.blit(text_surface2, text_rect2)
-
-
 
 
 
@@ -212,12 +257,13 @@ clock = pygame.time.Clock()
 
 #import meteor image
 meteor_surface = pygame.image.load(join('images', 'meteor.png')).convert_alpha()
+powerup_surface = pygame.image.load(join('images', 'powerup.png')).convert_alpha()
 #import laser image
 laser_surface = pygame.image.load(join('images', 'laser.png')).convert_alpha()
 # import star surface once outside of class so not importing it 20 times
 star_surf = pygame.image.load(join( 'images', 'star.png')).convert_alpha()
 #import our font
-font = pygame.font.Font(join('images', 'Oxanium-Bold.ttf'), 40)
+font = pygame.font.Font(join('images', 'WimpyKid.ttf'), 40)
 text_surface = font.render('text', True, (240, 240, 230))
 #explosion frames 
 explosion_frames = [pygame.image.load(join('images', 'explosion',f'{i}.png')).convert_alpha() for i in range(21)]
@@ -232,21 +278,21 @@ game_music = pygame.mixer.Sound(join('audio', 'game_music.wav'))
 game_music.set_volume(0.1)
 #plays music indefinetly
 game_music.play(loops = -1)
-
+powerup_sound = pygame.mixer.Sound(join('audio', 'powerup.ogg'))
+powerup_sound.set_volume(0.20)
 
 ################### sprites
 #adds all our sprites into one object so we can call it later
 all_sprites = pygame.sprite.Group()
 meteor_sprites = pygame.sprite.Group()
 laser_sprites = pygame.sprite.Group()
+powerup_sprites = pygame.sprite.Group()
 
 #create the stars in 20 random locations
 for i in range(20):
     Star(all_sprites, star_surf)
 #create player in game 
 player = Player(all_sprites)
-
-
 #################### custom events
 
 #meteor event
@@ -272,6 +318,10 @@ while running:
            #set x co-ordinate outside the window so cant see them spawn
            x, y = randint(0, WINDOW_WIDTH), randint(-200, -100)
            Meteor(meteor_surface, (x, y), (all_sprites, meteor_sprites))
+           # Spawn a powerup only 5% of the time.
+           if randint(1, 10) == 1:
+               if not isPowerUp:
+                   Powerup(powerup_surface, (x, y), all_sprites, powerup_sprites)
 
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_F1:  # Common toggle key
@@ -299,8 +349,5 @@ while running:
 
     #updates the window
     pygame.display.update()
-
-
-
 
 pygame.quit()
